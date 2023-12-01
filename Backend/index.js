@@ -47,7 +47,35 @@ const upload = multer({ storage: storage });
 app.use(cors(corsOptions));
 app.use(bp.json());
 app.use(bp.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, '../Frontend')));
+app.use(express.static(path.join(__dirname, '../public')));
+
+function ensureAdmin(req, res, next) {
+  if (req.session.userRole === 'Admin') {
+      next(); // If the user is an admin, proceed to the next middleware function or route handler
+  } else {
+      res.status(403).send('Forbidden'); // If the user is not an admin, send a 403 Forbidden response
+  }
+}
+
+function ensureAuthenticated(req, res, next) {
+  if (req.session.userRole) {
+    next();
+  } else {
+    res.status(403).send('Forbidden');
+  }
+}
+
+app.get('/page.html', ensureAuthenticated, (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend', 'page.html'));
+});
+
+app.get('/page2.html', ensureAdmin, (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend', 'page2.html'));
+});
+
+app.get('/login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend', 'login.html'));
+});
 
 app.post('/login', async (req, res) => {
   const { nama, password } = req.body;
@@ -68,16 +96,17 @@ app.post('/login', async (req, res) => {
       const userRole = results[0].role;
 
       if (password === storedPassword) {
-          if (userRole === 'Admin' || userRole === 'User') {
-              return res.status(200).json({
-                  message: `Login successful (${userRole})`,
-                  user_id: results[0].id,
-                  user_role: userRole,
-              });
-          } else {
-              return res.status(401).send('Hanya user dan admin yang dapat login');
-          }
-      }
+        if (userRole === 'Admin' || userRole === 'User') {
+            req.session.userRole = userRole; // Store user role in session
+            return res.status(200).json({
+                message: `Login successful (${userRole})`,
+                user_id: results[0].id,
+                user_role: userRole,
+            });
+        } else {
+            return res.status(401).send('Hanya user dan admin yang dapat login');
+        }
+    }
       return res.status(401).send('Password salah');
   } catch (error) {
       console.error(error);
@@ -154,6 +183,15 @@ app.post('/apply_job', upload.single('file_upload'), async (req, res) => {
 
 app.get('/home', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend', 'login.html'));
+});
+
+app.get('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if(err) {
+      return console.log(err);
+    }
+    res.redirect('/login.html');
+  });
 });
 
 app.listen(3300,()=>{

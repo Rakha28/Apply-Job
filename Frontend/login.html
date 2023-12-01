@@ -33,10 +33,10 @@
                   if (response.data.message.startsWith('Login successful')) {
                      const userRole = response.data.user_role;
 
-                    if (userRole === 'Admin') {
-                      window.location.href = '/page2.html';
+                     if (userRole === 'Admin') {
+                      window.location.href = 'http://localhost:3300/page2.html';
                     } else if (userRole === 'User') {
-                      window.location.href = '/page.html';
+                      window.location.href = 'http://localhost:3300/page.html';
                     } else {
                       console.error('Invalid user role');
                     }
